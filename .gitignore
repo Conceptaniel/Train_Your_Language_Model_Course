@@ -173,7 +173,17 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-data/private/
-output/
 checkpoints/
 AtlaSetCombined.txt
+# Prevent accidental commits of cleaned or redacted DM exports
+data/*_cleaned.txt
+data/*_redacted.txt
+# Ignore derived and private data exports
+data/*.jsonl
+data/dm_bpe.txt
+data/private/
+# Ignore generated notebook outputs and local workspace files
+notebooks/*_executed.ipynb
+output/
+.vscode/
+*.code-workspace
