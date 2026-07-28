@@ -53,8 +53,10 @@ class RegexTokenizer(Tokenizer):
             for chunk_ids in ids:
                 # passing in stats will update it in place, adding up counts
                 get_stats(chunk_ids, stats)
+            if not stats:
+                break
             # find the pair with the highest count
-            pair = max(stats, key=stats.get)
+            pair = max(stats.items(), key=lambda item: item[1])[0]
             # mint a new token: assign it the next available id
             idx = 256 + i
             # replace all occurrences of pair in ids with idx

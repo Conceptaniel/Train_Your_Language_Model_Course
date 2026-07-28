@@ -1,0 +1,83 @@
+import json
+from pathlib import Path
+path = Path(r'c:\Users\dglan\Documents\hackclub\llm\Train_Your_Language_Model_Course-clean\notebooks\1_DataCleaning.ipynb')
+nb = json.loads(path.read_text(encoding='utf-8'))
+changed = False
+for cell in nb['cells']:
+    if cell.get('cell_type') == 'code' and any('def read_plain_chat(file_path: str) -> pd.DataFrame:' in line for line in cell.get('source', [])):
+        cell['source'] = [
+            'def read_plain_chat(file_path: str) -> pd.DataFrame:\n',
+            '    import re\n',
+            '    # Generic cleaner for plain text chats (Discord or other exports)\n',
+            '    email_pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}"\n',
+            '    url_pattern = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"\n',
+            '    media_pattern = "<Media omitted>"\n',
+            '    edited_message = "<This message was edited>"\n',
+            '    deleted_message = "You deleted this message"\n',
+            '    null_message = "null"\n',
+            '    created_group_message = "created group"\n',
+            '    added_you_to_group_message = "added you"\n',
+            '    tagging_pattern = r"@[\\w]+"\n',
+            '    export_marker = r"Exported .*message\\(s\\)"\n',
+            '    with open(file_path, "r", encoding="utf-8") as f:\n',
+            '        lines = f.readlines()\n',
+            '    filtered = []\n',
+            '    for line in lines:\n',
+            '        line = line.strip()\n',
+            '        if not line:\n',
+            '            continue\n',
+            '        if re.match(r"^[=-]{4,}$", line):\n',
+            '            continue\n',
+            '        if (\n',
+            '            deleted_message in line or\n',
+            '            null_message in line or\n',
+            '            media_pattern in line or\n',
+            '            created_group_message in line or\n',
+            '            added_you_to_group_message in line or\n',
+            '            re.search(email_pattern, line) or\n',
+            '            re.search(url_pattern, line) or\n',
+            '            re.search(export_marker, line)\n',
+            '        ):\n',
+            '            continue\n',
+            '        line = line.replace(edited_message, "").strip()\n',
+            '        line = re.sub(tagging_pattern, "", line).strip()\n',
+            '        if line:\n',
+            '            filtered.append(line)\n',
+            '    # Normalize unicode and join\n',
+            '    content = "\\n".join(filtered)\n',
+            '    content = content.replace("\\u202f", " ")\n',
+            '    content = content.replace("\\u200E", "").replace("\\u200F", "")\n',
+            '    # Parse lines: prefer dd/mm/yyyy style timestamps first, then ISO-like timestamps, then fall back to \'sender: message\'\n',
+            '    messages = []\n',
+            '    dm_pattern = r"^(\\d{1,2}/\\d{1,2}/\\d{2,4}, \\d{1,2}:\\d{2}(?::\\d{2})?)\\s*-\\s*(.*?):\\s*(.*)$"\n',
+            '    iso_pattern = r"^\\[?(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2})\\]?\\s*(.*?):\\s*(.*)$"\n',
+            '    for line in content.split("\\n"):\n',
+            '        if not line.strip():\n',
+            '            continue\n',
+            '        m = re.match(dm_pattern, line)\n',
+            '        if m:\n',
+            '            ts, sender, msg = m.groups()\n',
+            '        else:\n',
+            '            m = re.match(iso_pattern, line)\n',
+            '            if m:\n',
+            '                ts, sender, msg = m.groups()\n',
+            '            else:\n',
+            '                m2 = re.match(r"^(.*?):\\s*(.*)$", line)\n',
+            '                if m2:\n',
+            '                    sender, msg = m2.groups()\n',
+            '                    ts = ""\n',
+            '                else:\n',
+            '                    sender = ""\n',
+            '                    msg = line\n',
+            '                    ts = ""\n',
+            '        messages.append((ts, sender.strip(), msg.strip()))\n',
+            '    df = pd.DataFrame(messages, columns=["timestamp","sender","message"])\n',
+            '    df["timestamp"] = pd.to_datetime(df["timestamp"], dayfirst=True, errors="coerce")\n',
+            '    return df\n',
+        ]
+        changed = True
+        break
+if not changed:
+    raise SystemExit('No matching read_plain_chat cell found')
+path.write_text(json.dumps(nb, indent=1, ensure_ascii=False), encoding='utf-8')
+print('patched')
